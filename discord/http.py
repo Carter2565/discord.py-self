@@ -65,6 +65,7 @@ from .errors import (
     DiscordServerError,
     GatewayNotFound,
     CaptchaRequired,
+    MFARequired,
 )
 from .file import _FileBase, File
 from .tracking import ContextProperties
@@ -987,6 +988,10 @@ class HTTPClient:
                             raise NotFound(response, data)
                         elif response.status >= 500:
                             raise DiscordServerError(response, data)
+                        elif response.status >= 401:
+                            if isinstance(data, dict) and 'mfa' in data:
+                                raise MFARequired(response, data)  # type: ignore
+                            raise HTTPException(response, data)
                         else:
                             if isinstance(data, dict) and 'captcha_key' in data:
                                 raise CaptchaRequired(response, data)  # type: ignore
@@ -1134,6 +1139,41 @@ class HTTPClient:
         self.user_id = int(data['id'])
         return data
 
+    # Auth management
+    
+    def auth_login(self, login: str, password: str, undelete: bool, login_source = None, gift_code_sku_id = None) -> list:
+        pass
+        payload = {"login":login, "password":password, "undelete":undelete, "login_source":login_source, "gift_code_sku_id":gift_code_sku_id}
+        return self.request(Route('post', '/auth/login'), json=payload)
+    
+    def auth_mfa_totp(self, code, ticket, login_source = None, gift_code_sku_id = None):
+        '''This is for Login only'''
+        payload = {"code":code, "ticket":ticket, "login_source":login_source, "gift_code_sku_id":gift_code_sku_id}
+        return self.request(Route('post', '/auth/mfa/totp'), json=payload)
+
+    def forgot_password(self, login: str):
+        '''This REQUIRES a captcha solver'''
+        payload = {"login":login}
+        return self.request(Route('post', '/auth/forgot'), json=payload)
+    
+    def reset_password(self, password, token, mfa_method = None, code = None, ticket = None, source = "/reset"):
+        '''If MFA is enabled this will need to be called twice to verify'''
+        payload = {
+            "token": token,
+            "password": password,
+            "source": source,
+            'method': mfa_method,
+            'ticket': ticket,
+            'code': code
+        }
+        return self.request(Route('post', '/auth/reset'), json=payload)
+    
+    # Mfa 
+    
+    def mfa_update(self, mfa_type, ticket, code):
+        payload = {'ticket':f'{ticket}','mfa_type': mfa_type,'data':code}
+        return self.request(Route('post', '/mfa/finish'), json=payload)
+    
     # Self user
 
     def get_me(self, with_analytics_token: bool = True) -> Response[user.User]:

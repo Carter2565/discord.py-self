@@ -5577,3 +5577,48 @@ class Client:
         else:
             data = await http.pomelo_attempt_unauthed(username)
         return data['taken']
+
+    async def mfa_totp(self, ticket, code):
+        """|coro|
+
+        Updates the '__Secure-recent_mfa' cookie 
+
+        .. versionadded:: 2.0.1
+
+        Parameters
+        -----------
+        ticket: :class:`str`
+            The ticket str
+        
+        code: :class:`str`
+            The totp verification code
+
+        Raises
+        -------
+        HTTPException
+            Bad Parameters
+
+        Returns
+        --------
+        :class:`coro`
+            MFA API response
+        """
+        response = await self.http.mfa_update('totp', ticket, f'{code}')
+        return response
+    
+    async def forgot_password(self, login: str):
+        """|coro|
+        
+        Sends reset password email. __Needs a update__
+
+        Args:
+            login (str): Email/Login Credential
+        """
+        response = await self.http.forgot_password(login)
+        pass
+    
+    
+    
+    
+    
+        

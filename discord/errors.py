@@ -57,6 +57,8 @@ __all__ = (
     'LoginFailure',
     'ConnectionClosed',
     'CaptchaRequired',
+    'MFARequired',
+    'LoginMFARequired'
 )
 
 
@@ -229,6 +231,38 @@ class DiscordServerError(HTTPException):
 
     __slots__ = ()
 
+class MFARequired(HTTPException):
+    """Exception that's raised when a Mfa is required and isn't handled.
+
+    Subclass of :exc:`HTTPException`.
+
+    .. versionadded:: 2.0.1
+
+    Attributes
+    ------------
+    errors: List
+        The MFA service errors.
+
+        .. versionadded:: 2.0.1
+    ticket: :class:`str`
+        The ticket to pass for client.mfa().
+
+        .. versionadded:: 2.0.1
+    methods: Dict
+        The dict that contains the methods
+
+        .. versionadded:: 2.0.1
+        
+    """
+    
+    __slots__ = ('errors', 'service', 'sitekey')
+    
+    def __init__(self, response: _ResponseType, message):
+        super().__init__(response, {'code': 401, 'message': 'MFA required'})
+        self.json = message
+        self.errors: List = message['mfa']
+        self.methods: Dict = message['mfa']['methods']
+        self.ticket: str = message['mfa']['ticket']
 
 class CaptchaRequired(HTTPException):
     """Exception that's raised when a CAPTCHA is required and isn't handled.
@@ -311,6 +345,29 @@ class LoginFailure(ClientException):
     """
 
     __slots__ = ()
+
+class LoginMFARequired(ClientException):
+    """Exception that's raised when a Mfa is required and isn't handled.
+
+    Subclass of :exc:`HTTPException`.
+
+    .. versionadded:: 2.0.1
+
+    Attributes
+    ------------
+    ticket: :class:`str`
+        The ticket to pass for client.mfa().
+
+        .. versionadded:: 2.0.1
+        
+    """
+    
+    __slots__ = ('errors', 'service', 'sitekey')
+    
+    def __init__(self, message, data):
+        super().__init__(message)
+        self.json = data
+        self.ticket: str = data['ticket']
 
 
 AuthFailure = LoginFailure
